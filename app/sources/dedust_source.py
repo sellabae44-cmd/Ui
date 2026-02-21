@@ -82,8 +82,24 @@ def _guess_ton(trade: Dict[str, Any]) -> Tuple[float | None, float | None, bool]
 class DeDustSource:
     name = "dedust"
 
-    def __init__(self, session: aiohttp.ClientSession):
-        self.session = session
+    def __init__(
+        self,
+        session: aiohttp.ClientSession | None = None,
+        gaspump_mode: bool = False,
+    ):
+        # Engine normally injects a shared aiohttp session. If not provided
+        # we lazily create one on first use (useful for minimal deployments).
+        self.session: aiohttp.ClientSession | None = session
+        self._own_session: bool = session is None
+        # Some deployments treat DeDust swaps from GasPump pools slightly differently.
+        # We keep the flag so engine can instantiate two variants.
+        self.gaspump_mode: bool = gaspump_mode
+
+    async def _ensure_session(self) -> aiohttp.ClientSession:
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession()
+            self._own_session = True
+        return self.session
 
     async def _autodetect_pool(self, token_address: str) -> str | None:
         """Best-effort pool discovery.
@@ -101,9 +117,11 @@ class DeDustSource:
             f"{DEDUST_API_BASE}/pools",
         ]
 
+        session = await self._ensure_session()
+
         for url in tried_urls:
             try:
-                async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
                     if r.status != 200:
                         continue
                     data = await r.json()
@@ -152,8 +170,9 @@ class DeDustSource:
             return SourceResult(events=[], next_cursor=cursor)
 
         url = f"{DEDUST_API_BASE}/pools/{pool}/trades"
+        session = await self._ensure_session()
         try:
-            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=20)) as r:
                 if r.status != 200:
                     text = await r.text()
                     log.warning("DeDust trades fetch failed (%s): %s", r.status, text[:200])

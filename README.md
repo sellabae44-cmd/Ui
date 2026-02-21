@@ -16,11 +16,14 @@ This repo is a **SpyTON-styled** Telegram bot framework that includes:
 ## Deploy on Railway (phone-friendly)
 
 1. Create Railway project and deploy this repo.
-2. Add **PostgreSQL** plugin (Railway sets `DATABASE_URL`).
+2. (Optional) Add **PostgreSQL** plugin.
+   - If you do nothing, the bot will automatically use a local SQLite DB file (zero setup).
+   - If you add Postgres, set `DATABASE_URL` (or a variable reference) and it will use Postgres.
 3. Set env vars:
    - `BOT_TOKEN`
-   - `DATABASE_URL` (auto)
    Optional:
+   - `DATABASE_URL` (only if you want Postgres)
+   - `SQLITE_PATH` (default `/tmp/spyton.db`; set to `/data/spyton.db` if you attach a Railway Volume)
    - `POLL_INTERVAL` (default 6)
    - `MOCK_TRADES=1` (to test posting)
    - `TONAPI_KEY` (to enable tonapi source)

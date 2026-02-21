@@ -12,20 +12,24 @@ from app.core.engine import Engine
 
 logging.basicConfig(level=logging.INFO)
 
-async def main():
+async def main() -> None:
     load_dotenv()
     settings = load_settings()
     if not settings.bot_token:
         raise RuntimeError("BOT_TOKEN missing")
-	# DATABASE_URL is optional. If not provided, we automatically fall back to
-	# a local SQLite database file so deployment is zero-setup.
+
+    # DATABASE_URL is optional. If not provided, we automatically fall back to
+    # a local SQLite database file so deployment is zero-setup.
 
     engine = make_engine(settings)
     await init_db(engine)
     db_sm = make_sessionmaker(engine)
 
     bot = Bot(settings.bot_token)
-    bot["db_sm"] = db_sm
+
+    # aiogram v3 Bot is not dict-like, so we attach our shared objects as attributes.
+    setattr(bot, "db_sm", db_sm)
+    setattr(bot, "settings", settings)
 
     dp = Dispatcher(storage=MemoryStorage())
     setup_dispatcher(dp)

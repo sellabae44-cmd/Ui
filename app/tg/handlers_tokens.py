@@ -87,8 +87,10 @@ async def got_pool(message: Message, state: FSMContext):
 
 
 async def _save_token(message_or_cbmsg: Message, data: dict, pool_address: str):
-    # db_sm is injected via middleware in main.py, available as message.bot["db_sm"]
-    db_sm = message_or_cbmsg.bot["db_sm"]
+    # db_sm is attached on the Bot instance in main.py (aiogram v3 Bot is not dict-like)
+    db_sm = getattr(message_or_cbmsg.bot, "db_sm", None)
+    if db_sm is None:
+        raise RuntimeError("DB sessionmaker not attached to bot")
     addr = data.get("token_address")
     src = data.get("source") or "auto"
     async with db_sm() as session:

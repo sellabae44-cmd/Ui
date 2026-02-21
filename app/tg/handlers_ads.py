@@ -77,7 +77,11 @@ async def _save(message: Message, state: FSMContext):
     if bt and bu:
         buttons.append({"text": bt, "url": bu})
 
-    async with message.bot["db_sm"]() as session:
+    db_sm = getattr(message.bot, "db_sm", None)
+    if db_sm is None:
+        raise RuntimeError("DB sessionmaker not attached to bot")
+
+    async with db_sm() as session:
         g = await session.get(Group, message.chat.id)
         if g is None:
             g = Group(chat_id=message.chat.id)
@@ -90,7 +94,10 @@ async def _save(message: Message, state: FSMContext):
     await state.clear()
 
 @router.callback_query(F.data == "ads:list")
-async def list_ads(cb: CallbackQuery, db_sm):
+async def list_ads(cb: CallbackQuery):
+    db_sm = getattr(cb.bot, "db_sm", None)
+    if db_sm is None:
+        raise RuntimeError("DB sessionmaker not attached to bot")
     async with db_sm() as session:
         res = await session.execute(select(Advert).where(Advert.chat_id==cb.message.chat.id).order_by(Advert.id.desc()))
         ads = res.scalars().all()
@@ -103,7 +110,10 @@ async def list_ads(cb: CallbackQuery, db_sm):
     await cb.answer()
 
 @router.callback_query(F.data.startswith("ad:toggle:"))
-async def toggle_ad(cb: CallbackQuery, db_sm):
+async def toggle_ad(cb: CallbackQuery):
+    db_sm = getattr(cb.bot, "db_sm", None)
+    if db_sm is None:
+        raise RuntimeError("DB sessionmaker not attached to bot")
     ad_id = int(cb.data.split(":")[-1])
     async with db_sm() as session:
         a = await session.get(Advert, ad_id)
@@ -116,7 +126,10 @@ async def toggle_ad(cb: CallbackQuery, db_sm):
     await cb.answer("Updated")
 
 @router.callback_query(F.data.startswith("ad:del:"))
-async def delete_ad(cb: CallbackQuery, db_sm):
+async def delete_ad(cb: CallbackQuery):
+    db_sm = getattr(cb.bot, "db_sm", None)
+    if db_sm is None:
+        raise RuntimeError("DB sessionmaker not attached to bot")
     ad_id = int(cb.data.split(":")[-1])
     async with db_sm() as session:
         a = await session.get(Advert, ad_id)

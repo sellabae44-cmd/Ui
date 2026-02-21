@@ -17,8 +17,8 @@ async def main():
     settings = load_settings()
     if not settings.bot_token:
         raise RuntimeError("BOT_TOKEN missing")
-    if not settings.database_url:
-        raise RuntimeError("DATABASE_URL missing")
+	# DATABASE_URL is optional. If not provided, we automatically fall back to
+	# a local SQLite database file so deployment is zero-setup.
 
     engine = make_engine(settings)
     await init_db(engine)
